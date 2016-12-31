@@ -1,0 +1,8 @@
+*.o
+*.P
+*.qm
+FlavorCoin-qt
+src/FlavorCoind
+Makefile
+build/
+*~
