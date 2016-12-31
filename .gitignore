@@ -6,3 +6,4 @@ src/FlavorCoind
 Makefile
 build/
 *~
+qrc_bitcoin.cpp
