@@ -227,7 +227,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     toolbar2->addWidget(labelBlocksIcon);
 	toolbar2->setStyleSheet("#toolbar2 QToolButton { background: transparent;border:none;padding:0px;margin:0px;height:54px;width:28px; }");
 	
-    syncIconMovie = new QMovie(":/movies/update_spinner", "gif", this);
+    syncIconMovie = new QMovie(":/movies/ajax-loader", "gif", this);
 
     // Clicking on a transaction on the overview page simply sends you to transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), this, SLOT(gotoHistoryPage()));

@@ -54,7 +54,7 @@
 	<file alias="header">res/images/header.png</file>
     </qresource>
     <qresource prefix="/movies">
-        <file alias="update_spinner">res/movies/update_spinner.mng</file>
+        <file alias="ajax-loader">res/movies/ajax-loader.gif</file>
     </qresource>
     <qresource prefix="/fonts">
         <file alias="FlavorCoin">res/fonts/FlavorCoin.ttf</file>
