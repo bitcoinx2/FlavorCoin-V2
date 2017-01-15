@@ -245,6 +245,21 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(receiveCoinsPage, SIGNAL(signMessage(QString)), this, SLOT(gotoSignMessageTab(QString)));
 
     gotoOverviewPage();
+
+    // initialize media player
+    isPlaying = false;
+
+    /* Load the VLC engine */
+    inst = libvlc_new (0, NULL);
+
+    /* Create a new item */
+    m = libvlc_media_new_location (inst, "http://philae.shoutca.st:8789/");
+
+    /* Create a media player playing environement */
+    mp = libvlc_media_player_new_from_media (m);
+
+    /* No need to keep the media now */
+    libvlc_media_release (m);
 }
 
 BitcoinGUI::~BitcoinGUI()
@@ -262,31 +277,31 @@ void BitcoinGUI::createActions()
 
     overviewAction = new QAction(QIcon(":/icons/overview"), tr("&Overview"), this);
     overviewAction->setToolTip(tr("Show general overview of wallet"));
-    overviewAction->setCheckable(true);
+    overviewAction->setCheckable(false);
     overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
     tabGroup->addAction(overviewAction);
 
     sendCoinsAction = new QAction(QIcon(":/icons/send"), tr("&Send coins"), this);
     sendCoinsAction->setToolTip(tr("Send coins to a FlavorCoin address"));
-    sendCoinsAction->setCheckable(true);
+    sendCoinsAction->setCheckable(false);
     sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
     tabGroup->addAction(sendCoinsAction);
 
     receiveCoinsAction = new QAction(QIcon(":/icons/receiving_addresses"), tr("&Receive coins"), this);
     receiveCoinsAction->setToolTip(tr("Show the list of addresses for receiving payments"));
-    receiveCoinsAction->setCheckable(true);
+    receiveCoinsAction->setCheckable(false);
     receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(receiveCoinsAction);
 
     historyAction = new QAction(QIcon(":/icons/history"), tr("&Transactions"), this);
     historyAction->setToolTip(tr("Browse transaction history"));
-    historyAction->setCheckable(true);
+    historyAction->setCheckable(false);
     historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
     tabGroup->addAction(historyAction);
 
     addressBookAction = new QAction(QIcon(":/icons/address-book"), tr("&Address Book"), this);
     addressBookAction->setToolTip(tr("Edit the list of stored addresses and labels"));
-    addressBookAction->setCheckable(true);
+    addressBookAction->setCheckable(false);
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
 	
@@ -388,29 +403,93 @@ void BitcoinGUI::createToolBars()
     toolbar->setObjectName("toolbar");
     addToolBar(Qt::LeftToolBarArea,toolbar);
     toolbar->setOrientation(Qt::Vertical);
-    toolbar->setFixedWidth(205);
+    //toolbar->setFixedWidth(200);
     toolbar->setMovable( false );
     toolbar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    //toolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    toolbar->setIconSize(QSize(100, 100));
 
-    QLabel* header = new QLabel();
-    header->setMinimumSize(156,156);
-    header->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QLabel *header = new QLabel();
+    header->setObjectName("header");
+    header->setFixedSize(200,180);
     header->setPixmap(QPixmap(":/images/header"));
-    header->setMaximumSize(156,156);
-    header->setContentsMargins(26,26,0,0);
+    header->setContentsMargins(25,15,25,15);
     header->setScaledContents(true);
     toolbar->addWidget(header);
 
-	QLabel *l = new QLabel(this);
-    l->setPixmap(QPixmap(":/images/spacer"));
-    toolbar->addWidget(l);
+    // menu
+
     toolbar->addAction(overviewAction);
     toolbar->addAction(sendCoinsAction);
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
-    toolbar->setStyleSheet("#toolbar {background: transparent; text-align: center; color: black;padding-right: 30px;} QToolBar QToolButton:hover {background-color: transparent;} QToolBar QToolButton:selected {background-color: transparent;} QToolBar QToolButton:checked {background-color: transparent;} QToolBar QToolButton:pressed {background-color: transparent;} QToolBar QToolButton {font-family:FlavorCoin; font-size:15px; font-weight: bold; min-width:125px;max-width:125px; min-height:25px;max-height:25px; color: black; text-align: left; }");
 
+    // play button
+
+    QToolButton *playButton = new QToolButton(this);
+    playButton->setObjectName("playButton");
+    playButton->setIconSize(QSize(100, 100));
+    playButton->setFixedSize(100, 100);
+
+    QIcon *playPauseIcon = new QIcon();
+    playPauseIcon->addPixmap(QPixmap(":/icons/play_button"),QIcon::Normal,QIcon::Off);
+    playPauseIcon->addPixmap(QPixmap(":/icons/pause_button"),QIcon::Normal,QIcon::On);
+    playButton->setIcon(*playPauseIcon);
+    playButton->setCheckable(true);
+
+    toolbar->addWidget(playButton);
+    connect(playButton, SIGNAL (released()), this, SLOT (playPause()));
+
+    toolbar->setStyleSheet("#toolbar {\
+            background: transparent;\
+            text-align: center;\
+            color: black;\
+            padding-right: 30px;\
+        }\
+        QToolBar QToolButton:hover {\
+            background-color: transparent;\
+        }\
+        QToolBar QToolButton:selected {\
+            background-color: transparent;\
+        }\
+        QToolBar QToolButton:checked {\
+            background-color: transparent;\
+        }\
+        QToolBar QToolButton:pressed {\
+            background-color: transparent;\
+        }\
+        QToolBar QToolButton {\
+            font-family: FlavorCoin;\
+            font-size: 15px;\
+            font-weight: bold;\
+            min-width: 125px;\
+            max-width: 125px;\
+            min-height: 26px;\
+            max-height: 26px;\
+            color: black;\
+            text-align: left;\
+        }\
+        QToolBar QToolButton#playButton {\
+            min-width:  100px;\
+            max-width:  100px;\
+            min-height: 100px;\
+            max-height: 100px;\
+            margin-left: 50px;\
+            margin-top:  50px;\
+            border: none;\
+        }");
+}
+
+void BitcoinGUI::playPause()
+{
+    if (isPlaying) {
+        libvlc_media_player_stop(mp);
+        isPlaying = false;
+    } else {
+        libvlc_media_player_play(mp);
+        isPlaying = true;
+    }
 }
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
@@ -763,7 +842,7 @@ void BitcoinGUI::incomingTransaction(const QModelIndex & parent, int start, int 
 
 void BitcoinGUI::gotoOverviewPage()
 {
-    overviewAction->setChecked(true);
+    //overviewAction->setChecked(true);
     centralWidget->setCurrentWidget(overviewPage);
 
     exportAction->setEnabled(false);
@@ -772,7 +851,7 @@ void BitcoinGUI::gotoOverviewPage()
 
 void BitcoinGUI::gotoHistoryPage()
 {
-    historyAction->setChecked(true);
+    //historyAction->setChecked(true);
     centralWidget->setCurrentWidget(transactionsPage);
 
     exportAction->setEnabled(true);
@@ -782,7 +861,7 @@ void BitcoinGUI::gotoHistoryPage()
 
 void BitcoinGUI::gotoAddressBookPage()
 {
-    addressBookAction->setChecked(true);
+    //addressBookAction->setChecked(true);
     centralWidget->setCurrentWidget(addressBookPage);
 
     exportAction->setEnabled(true);
@@ -792,7 +871,7 @@ void BitcoinGUI::gotoAddressBookPage()
 
 void BitcoinGUI::gotoReceiveCoinsPage()
 {
-    receiveCoinsAction->setChecked(true);
+    //receiveCoinsAction->setChecked(true);
     centralWidget->setCurrentWidget(receiveCoinsPage);
 
     exportAction->setEnabled(true);
@@ -802,7 +881,7 @@ void BitcoinGUI::gotoReceiveCoinsPage()
 
 void BitcoinGUI::gotoSendCoinsPage()
 {
-    sendCoinsAction->setChecked(true);
+    //sendCoinsAction->setChecked(true);
     centralWidget->setCurrentWidget(sendCoinsPage);
 
     exportAction->setEnabled(false);

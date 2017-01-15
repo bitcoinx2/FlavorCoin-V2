@@ -2,7 +2,9 @@
 #define BITCOINGUI_H
 
 #include <QMainWindow>
+#include <QToolButton>
 #include <QSystemTrayIcon>
+ #include <vlc/vlc.h>
 
 #include <stdint.h>
 
@@ -104,6 +106,12 @@ private:
 
     QMovie *syncIconMovie;
 
+    libvlc_instance_t * inst;
+    libvlc_media_player_t *mp;
+    libvlc_media_t *m;
+
+    bool isPlaying;
+
     uint64_t nWeight;
 
     /** Create the main UI actions. */
@@ -187,6 +195,8 @@ private slots:
 
     void updateWeight();
     void updateStakingIcon();
+
+    void playPause();
 };
 
 #endif
