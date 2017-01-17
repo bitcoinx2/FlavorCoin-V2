@@ -42,7 +42,6 @@
 #include <QStatusBar>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPushButton>
 #include <QLocale>
 #include <QMessageBox>
 #include <QMimeData>
@@ -58,6 +57,8 @@
 #include <QFontDatabase>
 #include <QUrl>
 #include <QStyle>
+#include <QToolButton>
+#include <QSlider>
 
 #include <iostream>
 
@@ -95,10 +96,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 			padding-top: 0px;\
 			padding-bottom: 0px;\
 			spacing: 10px;\
-		}\
-		#spacer {\
-			background: transparent;\
-			border: none;\
 		}\
 		#toolbar2 {\
 			border: none;\
@@ -225,7 +222,17 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	toolbar2->addWidget(labelStakingIcon);
     toolbar2->addWidget(labelConnectionsIcon);
     toolbar2->addWidget(labelBlocksIcon);
-	toolbar2->setStyleSheet("#toolbar2 QToolButton { background: transparent;border:none;padding:0px;margin:0px;height:54px;width:28px; }");
+	toolbar2->setStyleSheet("#toolbar2 QToolButton {\
+        background: transparent;\
+        border:none;\
+        padding:0px;\
+        margin:0px;\
+        height:54px;\
+        width:28px;\
+    }\
+    QToolBar QSlider {\
+        margin-top: 50px;\
+	}");
 	
     syncIconMovie = new QMovie(":/movies/ajax-loader", "gif", this);
 
@@ -260,6 +267,11 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     /* No need to keep the media now */
     libvlc_media_release (m);
+    
+    // set up slider
+    QSlider *volumeSlider = new QSlider(Qt::Vertical);
+    volumeSlider->setFixedHeight(200);
+    toolbar2->addWidget(volumeSlider);
 }
 
 BitcoinGUI::~BitcoinGUI()

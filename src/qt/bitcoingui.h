@@ -2,7 +2,6 @@
 #define BITCOINGUI_H
 
 #include <QMainWindow>
-#include <QToolButton>
 #include <QSystemTrayIcon>
  #include <vlc/vlc.h>
 
