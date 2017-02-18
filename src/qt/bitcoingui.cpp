@@ -26,6 +26,7 @@
 #include "guiutil.h"
 #include "rpcconsole.h"
 #include "wallet.h"
+#include "player.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -65,6 +66,15 @@
 extern CWallet* pwalletMain;
 extern int64_t nLastCoinStakeSearchInterval;
 double GetPoSKernelPS();
+
+
+static QWidget* makeToolBarSpacer()
+{
+    QWidget* spacer = new QWidget();
+    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    spacer->setStyleSheet("QWidget { background: none; }");
+    return spacer;
+}
 
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
@@ -197,7 +207,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	labelStakingIcon = new QLabel();
     labelConnectionsIcon = new QLabel();
     labelBlocksIcon = new QLabel();
-	
+
 	if (GetBoolArg("-staking", true))
     {
         QTimer *timerStakingIcon = new QTimer(labelStakingIcon);
@@ -222,7 +232,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 	toolbar2->addWidget(labelStakingIcon);
     toolbar2->addWidget(labelConnectionsIcon);
     toolbar2->addWidget(labelBlocksIcon);
-	toolbar2->setStyleSheet("#toolbar2 QToolButton {\
+	toolbar2->setStyleSheet("QToolButton {\
         background: transparent;\
         border:none;\
         padding:0px;\
@@ -230,10 +240,11 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         height:54px;\
         width:28px;\
     }\
-    QToolBar QSlider {\
-        margin-top: 50px;\
+    QSlider {\
+        padding-left: 5px;\
+        border: none\
 	}");
-	
+
     syncIconMovie = new QMovie(":/movies/ajax-loader", "gif", this);
 
     // Clicking on a transaction on the overview page simply sends you to transaction history page
@@ -252,27 +263,21 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     connect(receiveCoinsPage, SIGNAL(signMessage(QString)), this, SLOT(gotoSignMessageTab(QString)));
 
     gotoOverviewPage();
-
-    // initialize media player
+    
+    // Player
+    player = new Player("http://philae.shoutca.st:8789/");
     isPlaying = false;
 
-    /* Load the VLC engine */
-    inst = libvlc_new (0, NULL);
+    toolbar2->addWidget(makeToolBarSpacer());
 
-    /* Create a new item */
-    m = libvlc_media_new_location (inst, "http://philae.shoutca.st:8789/");
-
-    /* Create a media player playing environement */
-    mp = libvlc_media_player_new_from_media (m);
-
-    /* No need to keep the media now */
-    libvlc_media_release (m);
-    
-    // set up slider
     QSlider *volumeSlider = new QSlider(Qt::Vertical);
-    volumeSlider->setFixedHeight(200);
+    volumeSlider->setFixedHeight(150);
+    //volumeSlider->setContentsMargins(50, 0, 0, 0);
     toolbar2->addWidget(volumeSlider);
+
+    connect(volumeSlider, SIGNAL(sliderMoved(int)), this, SLOT(setVolume(int)));
 }
+
 
 BitcoinGUI::~BitcoinGUI()
 {
@@ -316,7 +321,7 @@ void BitcoinGUI::createActions()
     addressBookAction->setCheckable(false);
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
-	
+
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -496,12 +501,17 @@ void BitcoinGUI::createToolBars()
 void BitcoinGUI::playPause()
 {
     if (isPlaying) {
-        libvlc_media_player_stop(mp);
+        player->stop();
         isPlaying = false;
     } else {
-        libvlc_media_player_play(mp);
+        player->start();
         isPlaying = true;
     }
+}
+
+void BitcoinGUI::setVolume(int v)
+{
+    player->setVolume(v);
 }
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)

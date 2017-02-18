@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
- #include <vlc/vlc.h>
 
 #include <stdint.h>
 
@@ -17,6 +16,7 @@ class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
+class Player;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -105,9 +105,7 @@ private:
 
     QMovie *syncIconMovie;
 
-    libvlc_instance_t * inst;
-    libvlc_media_player_t *mp;
-    libvlc_media_t *m;
+    Player* player;
 
     bool isPlaying;
 
@@ -196,6 +194,7 @@ private slots:
     void updateStakingIcon();
 
     void playPause();
+    void setVolume(int volume);
 };
 
 #endif
