@@ -60,8 +60,9 @@
 #include <QStyle>
 #include <QToolButton>
 #include <QSlider>
-
+#include <QTimer>
 #include <iostream>
+#include <boost/network/protocol/http/client.hpp>
 
 extern CWallet* pwalletMain;
 extern int64_t nLastCoinStakeSearchInterval;
@@ -266,12 +267,16 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     
     // Player
     player = new Player("http://philae.shoutca.st:8789/");
+    //connect(player, SIGNAL(newSong()), this, SLOT(updateTitle()));
     isPlaying = false;
+    timer = new QTimer(this); // for updating the title
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateTitle2()));
 
     toolbar2->addWidget(makeToolBarSpacer());
 
     QSlider *volumeSlider = new QSlider(Qt::Vertical);
     volumeSlider->setFixedHeight(150);
+    volumeSlider->setValue(50);
     //volumeSlider->setContentsMargins(50, 0, 0, 0);
     toolbar2->addWidget(volumeSlider);
 
@@ -503,9 +508,13 @@ void BitcoinGUI::playPause()
     if (isPlaying) {
         player->stop();
         isPlaying = false;
+        timer->stop();
+        setWindowTitle(tr("FlavorCoin") + " - " + tr("Wallet"));
     } else {
         player->start();
         isPlaying = true;
+        setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(fetchTitle()));
+        timer->start(10000); // fetch the current title every 10 seconds
     }
 }
 
@@ -513,6 +522,29 @@ void BitcoinGUI::setVolume(int v)
 {
     player->setVolume(v);
 }
+
+/*
+void BitcoinGUI::updateTitle()
+{
+    setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(player->getTitle()));
+}
+*/
+void BitcoinGUI::updateTitle2(){
+    setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(fetchTitle()));
+}
+
+
+// from http://stackoverflow.com/questions/4488128/how-can-i-fetch-data-from-a-website-inside-a-c-program#4488201
+std::string BitcoinGUI::fetchTitle()
+{
+    boost::network::http::client client;
+    boost::network::http::client::request request("http://philae.shoutca.st:8789/currentsong?sid=1");
+    request << boost::network::header("Connection", "close");
+    boost::network::http::client::response response = client.get(request);
+    
+    return body(response);
+}
+
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
 {

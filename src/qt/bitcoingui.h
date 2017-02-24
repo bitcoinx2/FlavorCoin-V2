@@ -5,6 +5,7 @@
 #include <QSystemTrayIcon>
 
 #include <stdint.h>
+#include <string>
 
 class TransactionTableModel;
 class ClientModel;
@@ -27,6 +28,7 @@ class QModelIndex;
 class QProgressBar;
 class QStackedWidget;
 class QUrl;
+class QTimer;
 QT_END_NAMESPACE
 
 /**
@@ -106,8 +108,9 @@ private:
     QMovie *syncIconMovie;
 
     Player* player;
-
     bool isPlaying;
+    std::string fetchTitle();
+    QTimer* timer; // for updating the title
 
     uint64_t nWeight;
 
@@ -195,6 +198,8 @@ private slots:
 
     void playPause();
     void setVolume(int volume);
+    //void updateTitle();
+    void updateTitle2();
 };
 
 #endif
