@@ -340,6 +340,13 @@ void BitcoinGUI::createMenuBar()
     help->addSeparator();
     help->addAction(aboutAction);
     help->addAction(aboutQtAction);
+
+    appMenuBar->setStyleSheet("QMenu { background-color: qlineargradient(spread:pad, x1:0.511, y1:1, x2:0.482909, y2:0, stop:0 rgba(232,232,232), stop:1 rgba(232,232,232)); color: black; padding-bottom:10px; }\
+        QMenu::item { color: black; background: transparent; }\
+        QMenu::item:selected { background-color:qlineargradient(x1: 0, y1: 0, x2: 0.5, y2: 0.5,stop: 0 rgba(99,99,99,45), stop: 1 rgba(99,99,99,45)); }\
+        QMenuBar { background-color: white; color: black; }\
+        QMenuBar::item { font-size:12px;padding-bottom:3px;padding-top:3px;padding-left:15px;padding-right:15px;color: black; background-color: white; } \
+        QMenuBar::item:selected { background-color:qlineargradient(x1: 0, y1: 0, x2: 0.5, y2: 0.5,stop: 0 rgba(99,99,99,45), stop: 1 rgba(99,99,99,45)); }");
 }
 
 static QWidget* makeToolBarSpacer()
@@ -360,21 +367,11 @@ void BitcoinGUI::createToolBars()
     //toolbar->setFixedWidth(200);
     //toolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     //toolbar->setIconSize(QSize(100, 100));
-    toolbar->setStyleSheet("#toolbar {\
-            text-align: center;\
-        }\
-        QToolButton:hover {\
-            background-color: transparent;\
-        }\
-        QToolButton:selected {\
-            background-color: transparent;\
-        }\
-        QToolButton:checked {\
-            background-color: transparent;\
-        }\
-        QToolButton:pressed {\
-            background-color: transparent;\
-        }\
+    toolbar->setStyleSheet("#toolbar { text-align: center; }\
+        QToolButton:hover { background-color: transparent; }\
+        QToolButton:selected { background-color: transparent; }\
+        QToolButton:checked { background-color: transparent; }\
+        QToolButton:pressed { background-color: transparent; }\
         QToolButton {\
             font-family: FlavorCoin;\
             font-size:   15px;\
