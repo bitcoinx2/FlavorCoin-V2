@@ -118,8 +118,10 @@ private:
     void createActions();
     /** Create the menu bar and sub-menus. */
     void createMenuBar();
-    /** Create the toolbars */
+    /** Create the main toolbar */
     void createToolBars();
+    /** Create the icon toolbar */
+    void createIconToolbar();
     /** Create system tray (notification) icon */
     void createTrayIcon();
 
@@ -198,8 +200,8 @@ private slots:
 
     void playPause();
     void setVolume(int volume);
-    //void updateTitle();
-    void updateTitle2();
+    void updateTitle();
+    void stopPlayer();
 };
 
 #endif

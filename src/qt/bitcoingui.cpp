@@ -63,19 +63,33 @@
 #include <QTimer>
 #include <iostream>
 #include <boost/network/protocol/http/client.hpp>
+#include <QProxyStyle>
 
 extern CWallet* pwalletMain;
 extern int64_t nLastCoinStakeSearchInterval;
 double GetPoSKernelPS();
 
-
-static QWidget* makeToolBarSpacer()
+/*
+ * This class is used to prevent the play button from moving its position when clicked.
+ * Source: https://forum.qt.io/post/133993
+ */
+class MyProxyStyle : public QProxyStyle
 {
-    QWidget* spacer = new QWidget();
-    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    spacer->setStyleSheet("QWidget { background: none; }");
-    return spacer;
-}
+public:
+	int pixelMetric(PixelMetric metric, const QStyleOption *option = 0, const QWidget *widget = 0) const
+	{
+		int ret = 0;
+		switch (metric) {
+			case QStyle::PM_ButtonShiftHorizontal:
+			case QStyle::PM_ButtonShiftVertical:
+				ret = 0; break;
+			default:
+				ret = QProxyStyle::pixelMetric(metric, option, widget);
+			break;
+		}
+		return ret;
+	}
+};
 
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
@@ -89,69 +103,14 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     trayIcon(0),
     notificator(0),
     rpcConsole(0),
+    isPlaying(false),
     nWeight(0)
 {
-    setFixedSize(970, 550);
-	QFontDatabase::addApplicationFont(":/fonts/FlavorCoin");
-    setWindowTitle(tr("FlavorCoin") + " - " + tr("Wallet"));
-	qApp->setStyleSheet("QMainWindow {\
-			background-image: url(:images/bkg);\
-			border: none;\
-		}\
-		#frame {} QToolBar QLabel {\
-			padding-top: 0px;\
-			padding-bottom: 0px;\
-			spacing: 10px;\
-		}\
-		QToolBar QLabel:item {\
-			padding-top: 0px;\
-			padding-bottom: 0px;\
-			spacing: 10px;\
-		}\
-		#toolbar2 {\
-			border: none;\
-			width: 0px;\
-			height: 0px;\
-			padding-top: 40px;\
-			padding-bottom: 0px;\
-			background-color: transparent;\
-		}\
-		#labelMiningIcon {\
-			padding-left: 5px;\
-			font-family: FlavorCoin;\
-			width: 100%;\
-			font-size: 10px;\
-			text-align: center;\
-			color: black;\
-		}\
-		QMenu {\
-			background-color: qlineargradient(spread: pad, x1: 0.511, y1: 1, x2: 0.482909, y2: 0, stop: 0 rgba(232, 232, 232), stop: 1 rgba(232, 232, 232));\
-			color: black;\
-			padding-bottom: 10px;\
-		}\
-		QMenu::item {\
-			color: black;\
-			background: transparent;\
-		}\
-		QMenu::item:selected {\
-			background-color: qlineargradient(x1: 0, y1: 0, x2: 0.5, y2: 0.5, stop: 0 rgba(99, 99, 99, 45), stop: 1 rgba(99, 99, 99, 45));\
-		}\
-		QMenuBar {\
-			background-color: white;\
-			color: black;\
-		}\
-		QMenuBar::item {\
-			font-size: 12px;\
-			padding-bottom: 3px;\
-			padding-top: 3px;\
-			padding-left: 15px;\
-			padding-right: 15px;\
-			color: black;\
-			background-color: white;\
-		}\
-		QMenuBar::item:selected {\
-			background-color: qlineargradient(x1: 0, y1: 0, x2: 0.5, y2: 0.5, stop: 0 rgba(99, 99, 99, 45), stop: 1 rgba(99, 99, 99, 45));\
-		}");
+    setMinimumSize(970, 550);
+    QFontDatabase::addApplicationFont(":/fonts/FlavorCoin");
+    updateTitle();
+    setObjectName("FlavorCoin");
+    setStyleSheet("#FlavorCoin { background-color: #ffffff}");
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/bitcoin"));
     setWindowIcon(QIcon(":icons/bitcoin"));
@@ -170,13 +129,16 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     // Create the toolbars
     createToolBars();
+    addToolBarBreak(Qt::LeftToolBarArea);
+    // Create icon toolbar
+    createIconToolbar();
 
     // Create the tray icon (or setup the dock icon)
     createTrayIcon();
 
     // Create tabs
     overviewPage = new OverviewPage();
-
+    
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
     transactionView = new TransactionView(this);
@@ -201,13 +163,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     setCentralWidget(centralWidget);
 
     // Create status bar
-
-
-    // Status bar notification icons
-    labelEncryptionIcon = new QLabel();
-	labelStakingIcon = new QLabel();
-    labelConnectionsIcon = new QLabel();
-    labelBlocksIcon = new QLabel();
+    //statusBar();
 
 	if (GetBoolArg("-staking", true))
     {
@@ -221,32 +177,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     progressBarLabel = new QLabel();
     progressBarLabel->setVisible(false);
     progressBar = new QProgressBar();
-    addToolBarBreak(Qt::LeftToolBarArea);
-    QToolBar *toolbar2 = addToolBar(tr("Tabs toolbar"));
-    addToolBar(Qt::LeftToolBarArea,toolbar2);
-    toolbar2->setOrientation(Qt::Vertical);
-    toolbar2->setMovable( false );
-    toolbar2->setObjectName("toolbar2");
-    toolbar2->setFixedWidth(28);
-    toolbar2->setIconSize(QSize(28,54));
-	toolbar2->addWidget(labelEncryptionIcon);
-	toolbar2->addWidget(labelStakingIcon);
-    toolbar2->addWidget(labelConnectionsIcon);
-    toolbar2->addWidget(labelBlocksIcon);
-	toolbar2->setStyleSheet("QToolButton {\
-        background: transparent;\
-        border:none;\
-        padding:0px;\
-        margin:0px;\
-        height:54px;\
-        width:28px;\
-    }\
-    QSlider {\
-        padding-left: 5px;\
-        border: none\
-	}");
-
-    syncIconMovie = new QMovie(":/movies/ajax-loader", "gif", this);
 
     // Clicking on a transaction on the overview page simply sends you to transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), this, SLOT(gotoHistoryPage()));
@@ -267,25 +197,18 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     
     // Player
     player = new Player("http://philae.shoutca.st:8789/");
+    player->setVolume(50);
     //connect(player, SIGNAL(newSong()), this, SLOT(updateTitle()));
     isPlaying = false;
     timer = new QTimer(this); // for updating the title
-    connect(timer, SIGNAL(timeout()), this, SLOT(updateTitle2()));
-
-    toolbar2->addWidget(makeToolBarSpacer());
-
-    QSlider *volumeSlider = new QSlider(Qt::Vertical);
-    volumeSlider->setFixedHeight(150);
-    volumeSlider->setValue(50);
-    //volumeSlider->setContentsMargins(50, 0, 0, 0);
-    toolbar2->addWidget(volumeSlider);
-
-    connect(volumeSlider, SIGNAL(sliderMoved(int)), this, SLOT(setVolume(int)));
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateTitle()));
+    connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(stopPlayer()));
 }
 
 
 BitcoinGUI::~BitcoinGUI()
 {
+    delete player;
     if(trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
         trayIcon->hide();
 #ifdef Q_OS_MAC
@@ -419,17 +342,56 @@ void BitcoinGUI::createMenuBar()
     help->addAction(aboutQtAction);
 }
 
+static QWidget* makeToolBarSpacer()
+{
+    QWidget* spacer = new QWidget();
+    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    spacer->setStyleSheet("QWidget { background: none; }");
+    return spacer;
+}
+
 void BitcoinGUI::createToolBars()
 {
     QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
     toolbar->setObjectName("toolbar");
-    addToolBar(Qt::LeftToolBarArea,toolbar);
     toolbar->setOrientation(Qt::Vertical);
-    //toolbar->setFixedWidth(200);
     toolbar->setMovable( false );
     toolbar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    //toolbar->setFixedWidth(200);
     //toolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    toolbar->setIconSize(QSize(100, 100));
+    //toolbar->setIconSize(QSize(100, 100));
+    toolbar->setStyleSheet("#toolbar {\
+            text-align: center;\
+        }\
+        QToolButton:hover {\
+            background-color: transparent;\
+        }\
+        QToolButton:selected {\
+            background-color: transparent;\
+        }\
+        QToolButton:checked {\
+            background-color: transparent;\
+        }\
+        QToolButton:pressed {\
+            background-color: transparent;\
+        }\
+        QToolButton {\
+            font-family: FlavorCoin;\
+            font-size:   15px;\
+            font-weight: bold;\
+            min-height:  26px;\
+            max-height:  26px;\
+            color:       black;\
+        }\
+        QToolButton#playButton {\
+            min-width:  100px;\
+            max-width:  100px;\
+            min-height: 100px;\
+            max-height: 100px;\
+            border:     none;\
+        }");
+        
+    // header image
 
     QLabel *header = new QLabel();
     header->setObjectName("header");
@@ -446,61 +408,81 @@ void BitcoinGUI::createToolBars()
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
+    
+    toolbar->addWidget(makeToolBarSpacer());
 
     // play button
+    
+    QWidget* frame = new QWidget();
+    frame->setContentsMargins(0, 18, 0, 18);
+    QHBoxLayout* layout = new QHBoxLayout(frame);
+    layout->setAlignment(Qt::AlignHCenter);
 
     QToolButton *playButton = new QToolButton(this);
+    playButton->setStyle(new MyProxyStyle); // prevent the button from changing its position when checked
     playButton->setObjectName("playButton");
     playButton->setIconSize(QSize(100, 100));
     playButton->setFixedSize(100, 100);
+    playButton->setCheckable(true);
 
     QIcon *playPauseIcon = new QIcon();
     playPauseIcon->addPixmap(QPixmap(":/icons/play_button"),QIcon::Normal,QIcon::Off);
     playPauseIcon->addPixmap(QPixmap(":/icons/pause_button"),QIcon::Normal,QIcon::On);
     playButton->setIcon(*playPauseIcon);
-    playButton->setCheckable(true);
 
-    toolbar->addWidget(playButton);
     connect(playButton, SIGNAL (released()), this, SLOT (playPause()));
+    
+    layout->addWidget(playButton);
+    toolbar->addWidget(frame);
 
-    toolbar->setStyleSheet("#toolbar {\
-            background: transparent;\
+    addToolBar(Qt::LeftToolBarArea, toolbar);
+}
+
+void BitcoinGUI::createIconToolbar()
+{
+    QToolBar *iconToolbar = addToolBar(tr("Icon toolbar"));
+    iconToolbar->setObjectName("iconToolbar");
+    iconToolbar->setStyleSheet("#iconToolbar {\
             text-align: center;\
-            color: black;\
-            padding-right: 30px;\
-        }\
-        QToolBar QToolButton:hover {\
             background-color: transparent;\
-        }\
-        QToolBar QToolButton:selected {\
-            background-color: transparent;\
-        }\
-        QToolBar QToolButton:checked {\
-            background-color: transparent;\
-        }\
-        QToolBar QToolButton:pressed {\
-            background-color: transparent;\
-        }\
-        QToolBar QToolButton {\
-            font-family: FlavorCoin;\
-            font-size: 15px;\
-            font-weight: bold;\
-            min-width: 125px;\
-            max-width: 125px;\
-            min-height: 26px;\
-            max-height: 26px;\
-            color: black;\
-            text-align: left;\
-        }\
-        QToolBar QToolButton#playButton {\
-            min-width:  100px;\
-            max-width:  100px;\
-            min-height: 100px;\
-            max-height: 100px;\
-            margin-left: 50px;\
-            margin-top:  50px;\
             border: none;\
+        }\
+        QLabel {\
+            margin-left: 7px\
+        }\
+        QSlider {\
+            margin-left: 5px;\
+            border: 0px;\
         }");
+
+    iconToolbar->setOrientation(Qt::Vertical);
+    iconToolbar->setMovable( false );
+    iconToolbar->setFixedWidth(34);
+    iconToolbar->setIconSize(QSize(28,54));
+
+    // Status bar notification icons
+    labelEncryptionIcon = new QLabel();
+	labelStakingIcon = new QLabel();
+    labelConnectionsIcon = new QLabel();
+    labelBlocksIcon = new QLabel();
+    iconToolbar->addWidget(labelEncryptionIcon);
+    iconToolbar->addWidget(labelStakingIcon);
+    iconToolbar->addWidget(labelConnectionsIcon);
+    iconToolbar->addWidget(labelBlocksIcon);
+
+    syncIconMovie = new QMovie(":/movies/ajax-loader", "gif", this);
+
+    iconToolbar->addWidget(makeToolBarSpacer());
+
+    // volume slider
+    QSlider *volumeSlider = new QSlider(Qt::Vertical);
+    volumeSlider->setFocusPolicy(Qt::NoFocus);
+    volumeSlider->setFixedHeight(150);
+    volumeSlider->setValue(50);
+    connect(volumeSlider, SIGNAL(valueChanged(int)), this, SLOT(setVolume(int)));
+    iconToolbar->addWidget(volumeSlider);
+    
+    addToolBar(Qt::LeftToolBarArea, iconToolbar);
 }
 
 void BitcoinGUI::playPause()
@@ -509,11 +491,11 @@ void BitcoinGUI::playPause()
         player->stop();
         isPlaying = false;
         timer->stop();
-        setWindowTitle(tr("FlavorCoin") + " - " + tr("Wallet"));
+        updateTitle();
     } else {
         player->start();
         isPlaying = true;
-        setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(fetchTitle()));
+        updateTitle();
         timer->start(10000); // fetch the current title every 10 seconds
     }
 }
@@ -523,26 +505,31 @@ void BitcoinGUI::setVolume(int v)
     player->setVolume(v);
 }
 
-/*
-void BitcoinGUI::updateTitle()
-{
-    setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(player->getTitle()));
-}
-*/
-void BitcoinGUI::updateTitle2(){
-    setWindowTitle(tr("FlavorCoin") + " - " + QString::fromStdString(fetchTitle()));
+void BitcoinGUI::updateTitle(){
+    if (isPlaying) {
+        setWindowTitle(tr("FlavorCoin Radio") + " - " + QString::fromStdString(fetchTitle()));
+    } else {
+        setWindowTitle(tr("FlavorCoin") + " - " + tr("Wallet"));
+    }
 }
 
+void BitcoinGUI::stopPlayer(){
+    player->stop();
+}
 
 // from http://stackoverflow.com/questions/4488128/how-can-i-fetch-data-from-a-website-inside-a-c-program#4488201
 std::string BitcoinGUI::fetchTitle()
 {
-    boost::network::http::client client;
-    boost::network::http::client::request request("http://philae.shoutca.st:8789/currentsong?sid=1");
-    request << boost::network::header("Connection", "close");
-    boost::network::http::client::response response = client.get(request);
-    
-    return body(response);
+    try {
+        boost::network::http::client client;
+        boost::network::http::client::request request("http://philae.shoutca.st:8789/currentsong?sid=1");
+        request << boost::network::header("Connection", "close");
+        boost::network::http::client::response response = client.get(request);
+        return body(response);
+    } catch (...) {
+        std::cout << "Oops, something went wrong while fetching the title!" << std::endl;
+    }
+    return "Title error";
 }
 
 

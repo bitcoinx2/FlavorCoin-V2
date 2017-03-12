@@ -1,14 +1,10 @@
-#include "player.h"
-#include <iostream>
-#include "bitcoingui.h"
+#include <boost/network/protocol/http/client.hpp>
 
 // from https://wiki.videolan.org/LibVLC_Tutorial/
 Player::Player(const char* src)
 {
-	const char * const vlc_args[] = {"-q"}; // no logging messages
-
 	/* Load the VLC engine */
-	inst = libvlc_new (sizeof(vlc_args) / sizeof(vlc_args[0]), vlc_args);
+	inst = libvlc_new (0, NULL);
 	
 	/* Create a new item */
 	m = libvlc_media_new_location (inst, src);
