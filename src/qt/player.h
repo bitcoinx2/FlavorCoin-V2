@@ -9,8 +9,6 @@ public:
 	void start();
 	void stop();
 	void setVolume(int volume);
-	//std::string getTitle();
-	//static std::string title;
 
 private:
 	libvlc_instance_t*      inst;
@@ -18,5 +16,5 @@ private:
 	libvlc_event_manager_t* mediaEventManager;
 	libvlc_media_t*         m;
 	int volume;
-	//static void updateTitle(const struct libvlc_event_t *, void *);
+	void sleep();
 };

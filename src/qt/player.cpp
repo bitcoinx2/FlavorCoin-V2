@@ -1,5 +1,7 @@
 #include "player.h"
 #include <iostream>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp> 
 #include "bitcoingui.h"
 
 // from https://wiki.videolan.org/LibVLC_Tutorial/
@@ -9,21 +11,27 @@ Player::Player(const char* src)
 
 	/* Load the VLC engine */
 	inst = libvlc_new (sizeof(vlc_args) / sizeof(vlc_args[0]), vlc_args);
-	
+
 	/* Create a new item */
 	m = libvlc_media_new_location (inst, src);
 
 	/* Create a media player playing environement */
 	mp = libvlc_media_player_new_from_media (m);
-	
+
 	/* No need to keep the media now */
 	libvlc_media_release (m);
-		
+
 	volume = 50;
-	/*
-	libvlc_event_manager_t* eventMgr = libvlc_media_player_event_manager(mp);
-	libvlc_event_attach(eventMgr, libvlc_MediaMetaChanged, Player::updateTitle, &m);
-	*/
+}
+
+// due to a bug in VLC (https://github.com/caprica/vlcj/issues/59),
+// the volume cannot be set right after start(). So what we're doing is
+// setting the volume to 0 before stopping, and waiting some time after
+// play() until we set it to the right volume again. this will only mean
+// a short delay until the audio can be heard.
+void Player::sleep()
+{
+	boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 }
 
 Player::~Player()
@@ -35,38 +43,24 @@ Player::~Player()
  
 	libvlc_release (inst);
 }
-/*
-std::string Player::getTitle()
-{
-	//std::string title = libvlc_media_get_meta(m, libvlc_meta_NowPlaying);
-	//std::cout << title << std::endl;
-	return title;
-}
 
-void updateTitle(const struct libvlc_event_t* ev, void *data)
-{
-	libvlc_media_t* media = (libvlc_media_t*) data;
-	// this line seems to crash; it would be great if we could use the native VLC capabilites for this,
-	// as we wouldn't have to rely on the huge cpp-net library.
-	Player::title = libvlc_media_get_meta(media, libvlc_meta_NowPlaying);
-}
-*/
 // from https://wiki.videolan.org/LibVLC_SampleCode_Qt/
 void Player::setVolume(int volume)
 {
 	this->volume = volume;
-	libvlc_audio_set_volume (mp, volume);
+	libvlc_audio_set_volume(mp, volume);
 }
 
 void Player::start()
 {
 	libvlc_media_player_play (mp);
-	//libvlc_audio_set_volume (mp, volume);
+	sleep();
+	libvlc_audio_set_volume(mp, volume);
 }
 
 void Player::stop()
 {
-	// the difference between pause and stop is that pause keeps the current volume, while
-	// stops always seems to reset it. There seem to be no other differences.
-	libvlc_media_player_pause (mp);
+	libvlc_audio_set_volume(mp, 0);
+	sleep();
+	libvlc_media_player_stop (mp);
 }
